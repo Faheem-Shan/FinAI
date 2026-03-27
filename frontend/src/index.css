@@ -1,0 +1,145 @@
+/* @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+@theme {
+  --color-primary: #15CC81;
+  --color-primary-hover: #12b371;
+  --color-primary-light: #E8F9F1;
+  --color-cream: #F5F3EF;
+  --color-text-main: #1A1A1A;
+  --color-text-secondary: #666666;
+
+  --font-inter: "Inter", sans-serif;
+  --font-outfit: "Outfit", sans-serif;
+
+  --shadow-premium: 0 4px 20px rgba(0, 0, 0, 0.05);
+
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply font-inter bg-cream text-text-main antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-outfit font-bold text-text-main leading-tight;
+  }
+
+  a {
+    @apply no-underline transition-all duration-200;
+  }
+
+  button {
+    @apply cursor-pointer transition-all duration-200 outline-none;
+  }
+
+  input, textarea, select {
+    @apply outline-none transition-all duration-200 bg-white;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-[#10B981] bg-clip-text text-transparent;
+  }
+  
+  .shadow-premium {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+} */
+
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+/* 🔹 DESIGN TOKENS */
+:root {
+  --color-primary: #15CC81;
+  --color-primary-hover: #12b371;
+
+  --bg-main: #F5F3EF;
+  --bg-card: #ffffff;
+
+  --text-main: #1A1A1A;
+  --text-secondary: #666666;
+
+  --border: #E5E7EB;
+}
+
+/* 🔹 DARK MODE */
+.dark {
+  --bg-main: #0F172A;
+  --bg-card: #1E293B;
+
+  --text-main: #F1F5F9;
+  --text-secondary: #94A3B8;
+
+  --border: #334155;
+}
+
+/* 🔹 BASE */
+@layer base {
+  body {
+    font-family: "Inter", sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+  }
+
+  input, textarea {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+  }
+}
+
+/* 🔹 UTILITIES */
+@layer utilities {
+  .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+
+  .text-main {
+    color: var(--text-main);
+  }
+
+  .text-secondary {
+    color: var(--text-secondary);
+  }
+
+
+.bg-primary {
+    background-color: var(--color-primary);
+  }
+
+  .bg-primary-hover {
+    background-color: var(--color-primary-hover);
+  }
+
+  .text-primary {
+    color: var(--color-primary);
+  }
+
+  .border-custom {
+    border-color: var(--border);
+  }
+
+  /* 🔥 SOFT GREEN (REPLACES bg-primary/10) */
+  .bg-primary-soft {
+    background-color: rgba(21, 204, 129, 0.1);
+  }
+
+  /* 🔥 GRADIENT TEXT (FIXED STRONG GREEN) */
+  .text-gradient {
+    background: linear-gradient(to right, #15CC81, #10B981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}

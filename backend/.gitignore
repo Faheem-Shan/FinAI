@@ -1,0 +1,23 @@
+# 🔐 ENV FILE
+.env
+
+# 🐍 PYTHON
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 🐘 DJANGO
+db.sqlite3
+media/
+
+# 🧪 VENV
+venv/
+.env/
+
+# 📦 SYSTEM
+.DS_Store
+Thumbs.db
+
+# 🔐 SECRET FILES
+*.env
