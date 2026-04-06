@@ -110,11 +110,12 @@ const Login = () => {
                   Password
                 </label>
                 <Link 
-                  to="#" 
+                  to="/forgot-password" 
                   className="text-xs text-primary hover:underline"
                 >
                   Forgot password?
                 </Link>
+
               </div>
               <input
                 type="password"

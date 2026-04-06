@@ -23,6 +23,9 @@ class Category(models.Model):
         default="expense"
     )
 
+    class Meta:
+        unique_together = ("user", "name", "type")
+        
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -90,6 +93,9 @@ class Budget(models.Model):
     month = models.IntegerField()
 
     year = models.IntegerField()
+
+    alert_80_sent = models.BooleanField(default=False)
+    alert_100_sent = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

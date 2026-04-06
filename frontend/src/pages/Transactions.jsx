@@ -21,7 +21,7 @@ const Transactions = () => {
       if (typeFilter) params.type = typeFilter;
       if (categoryFilter) params.category = categoryFilter;
 
-      const res = await api.get("transactions/", { params });
+      const res = await api.get("finance/transactions/", { params });
       setTransactions(res.data);
     } catch (err) {
       console.error(err);
@@ -35,17 +35,17 @@ const Transactions = () => {
   }, [fetchTransactions]);
 
   useEffect(() => {
-    api.get("categories/").then(res => setCategories(res.data));
+    api.get("finance/categories/").then(res => setCategories(res.data));
   }, []);
 
   const deleteTransaction = async (id) => {
     if (!window.confirm("Delete this transaction?")) return;
-    await api.delete(`transactions/${id}/`);
+    await api.delete(`finance/transactions/${id}/`);
     fetchTransactions();
   };
 
   const handleExport = async () => {
-    const res = await api.get("export/", { responseType: "blob" });
+    const res = await api.get("finance/export/", { responseType: "blob" });
     const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -74,7 +74,7 @@ const Transactions = () => {
           </button>
 
           <button
-            onClick={() => navigate("/add-transaction")}
+            onClick={() => navigate("/add")}
             className="flex items-center gap-2 px-5 py-2 bg-green-500 text-white rounded-xl shadow"
           >
             <Plus size={16} /> Add Transaction
@@ -140,30 +140,33 @@ const Transactions = () => {
                   {new Date(t.date).toLocaleDateString()}
                 </td>
 
-                <td className="p-4 font-semibold text-sm">
+                <td className="p-4 font-black text-slate-800 text-sm">
                   {t.description}
                 </td>
 
                 {/* CATEGORY */}
                 <td className="p-4">
-                  <span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold">
+                  <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-tight">
                     {t.category_name || "Uncategorized"}
                   </span>
                 </td>
 
                 {/* TYPE */}
-                <td className="p-4 text-gray-500 text-sm font-semibold">
-                  {t.type.toUpperCase()}
+                <td className="p-4">
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider ${
+                    t.type === "income" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-rose-100 text-rose-700 border border-rose-200"
+                  }`}>
+                    {t.type}
+                  </span>
                 </td>
 
                 {/* AMOUNT */}
                 <td
-                  className={`p-4 text-right font-bold ${
-                    t.type === "expense" ? "text-red-500" : "text-green-500"
+                  className={`p-4 text-right font-black text-sm ${
+                    t.type === "expense" ? "text-rose-500" : "text-emerald-500"
                   }`}
                 >
-                  {t.type === "expense" ? "-" : "+"}$
-                  {parseFloat(t.amount).toLocaleString()}
+                  {t.type === "expense" ? "-" : "+"}${parseFloat(t.amount).toLocaleString()}
                 </td>
 
                 {/* DELETE */}

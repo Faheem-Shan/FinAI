@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from django.contrib.auth import get_user_model
-
+from django.conf import settings  
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -22,7 +22,30 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
 
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+
+            message = f"""Hi {user.username},
+
+Welcome to FinAI 🎉
+
+We're excited to have you on board!
+
+Start managing your finances smarter 
+
+ - Team FinAI
+ """
+
+            send_mail(
+                subject='Welcome to FinAI 🎉',
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,  # NEW (fixed)
+                recipient_list=[user.email],
+                fail_silently=True,  # NEW (avoid blocking signup)
+            )
+
+
+
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -61,7 +84,9 @@ class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get("email")
+        email = request.data.get("email").strip()
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
 
         try:
             user = User.objects.get(email=email)
@@ -73,18 +98,33 @@ class ForgotPasswordView(APIView):
             # frontend URL (React)
             reset_link = f"http://localhost:5173/reset/{uid}/{token}/"
 
-            # send email (console for now)
+            message = f"""Hi {user.username},
+You requested a password reset.
+
+Click the link below to reset your password:
+{reset_link}
+
+If you didn't request this, please ignore this email.
+
+- Team FinAI
+ """
+
+
+
+            # send email 
+            
             send_mail(
                 subject="Password Reset",
-                message=f"Click this link to reset your password: {reset_link}",
-                from_email=None,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,  
                 recipient_list=[email],
+                fail_silently=False,
             )
 
-            return Response({"message": "Reset link sent to email"})
+            return Response({"message": "If email exists, reset link sent"})
 
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
+            return Response({"message": "If email exists, reset link sent"})
 
 
 
@@ -109,6 +149,9 @@ class ResetPasswordView(APIView):
             if not password:
                 return Response({"error": "Password is required"}, status=400)
 
+            if len(password) < 6:
+                return Response({"error": "Password too short"}, status=400)
+            
             # set new password
             user.set_password(password)
             user.save()

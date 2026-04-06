@@ -7,12 +7,15 @@ import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import AddTransaction from "./pages/AddTransaction";
 import Budgets from "./pages/Budgets";
-// import Insights from "./pages/Insights";
+import Insights from "./pages/Insights";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import Home from "./pages/Home";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
 
 import { AuthContext } from "./context/AuthContext";
 
@@ -44,6 +47,9 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset/:uid/:token" element={<ResetPassword />} />
+
 
       {/* PROTECTED WITH LAYOUT */}
       <Route
@@ -72,15 +78,6 @@ function App() {
           </PrivateRoute>
         }
       />
-      
-      <Route
-          path="/add-transaction"
-          element={
-            <PrivateRoute>
-              <Layout><AddTransaction /></Layout>
-            </PrivateRoute>
-          }
-        />
 
       <Route
         path="/budgets"
