@@ -23,6 +23,7 @@ urlpatterns = [
 
     path("api/accounts/", include("accounts.urls")),
     path("api/finance/", include("finance.urls")),
+    path("api/tenants/", include("tenants.urls")),
 
     re_path(
         r"^swagger/$",

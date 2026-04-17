@@ -8,49 +8,210 @@ from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from .utils import password_reset_token
-
+from tenants.models import Company,CompanyUser
 from .serializers import RegisterSerializer, UserSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import CustomTokenObtainPairSerializer
 
 User = get_user_model()
-
 # REGISTER USER
-class RegisterView(APIView):
+# class RegisterView(APIView):
 
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         serializer = RegisterSerializer(data=request.data)
+
+#         if serializer.is_valid():
+            
+#             #  Get Extra Fields
+#             account_type = request.data.get("account_type", "personal") # 'personal' or 'business'
+#             company_name = request.data.get("company_name", "").strip()
+
+#             #  BUSINESS FLOW: CREATE COMPANY
+#             if account_type == "business" and company_name:
+                
+#                 # Check if company exists (case-insensitive)
+#                 existing_company = Company.objects.filter(name__iexact=company_name).first()
+#                 if existing_company:
+#                     return Response({
+#                         "error": "Company already exists. Please contact your admin or request an invite."
+#                     }, status=400)
+
+#                 # Create Company
+#                 company = Company.objects.create(
+#                     name=company_name,
+#                     domain=company_name.lower().replace(" ", "-") # Simple slug
+#                 )
+
+#                 # Save User and explicitly link to Company
+#                 user = serializer.save()
+#                 user.company = company
+#                 user.save()
+
+#                 # Assign first user as Admin
+#                 CompanyUser.objects.create(
+#                     company=company,
+#                     email=user.email,
+#                     name=user.username,
+#                     role="admin"
+#                 )
+            
+#             else:
+#                 user = serializer.save()
+#                 email = user.email
+
+#                 if company_name:
+#                     company = Company.objects.filter(name__iexact=company_name).first()
+
+#                     if company:
+#                         # 🔐 CHECK INVITATION FOR THIS COMPANY
+#                         company_user = CompanyUser.objects.filter(
+#                             email=email,
+#                             company=company
+#                         ).first()
+
+#                         if not company_user:
+#                             return Response({
+#                                 "error": "You are not invited to this company. Please contact admin."
+#                             }, status=400)
+
+                        
+#                         user.company = company
+#                         user.save()
+
+#                     else:
+#                         # Company not found → treat as personal
+#                         user.company = None
+#                         user.save()
+
+#                 else:
+#                     # No company → personal user
+#                     user.company = None
+#                     user.save()
+
+#             # SEND WELCOME EMAIL
+#             message = f"""Hi {user.username},
+
+# Welcome to FinAI 🎉
+
+# We're excited to have you on board!
+
+# Start managing your finances smarter 
+
+# - Team FinAI
+# """
+#             send_mail(
+#                 subject='Welcome to FinAI 🎉',
+#                 message=message,
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 recipient_list=[user.email],
+#                 fail_silently=True,
+#             )
+
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# backend/accounts/views.py
+
+class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
 
         if serializer.is_valid():
-            user = serializer.save()
+            # 🔍 Extract fields for validation BEFORE saving the user
+            email = serializer.validated_data.get('email')
+            account_type = request.data.get("account_type", "personal")
+            company_name = request.data.get("company_name", "").strip()
 
-            message = f"""Hi {user.username},
+            # 1️⃣ STEP 1: CHECK INVITATION (Priority #1)
+            invitation = CompanyUser.objects.filter(email=email).first()
 
-Welcome to FinAI 🎉
+            if invitation:
+                user = serializer.save()
+                user.company = invitation.company
+                user.save()
+                
+                invitation.name = user.username
+                invitation.save()
 
-We're excited to have you on board!
+            # 2️⃣ STEP 2: BUSINESS FLOW
+            elif account_type == "business":
+                if not company_name:
+                    return Response({"error": "Company name is required."}, status=400)
 
-Start managing your finances smarter 
+                if Company.objects.filter(name__iexact=company_name).exists():
+                    return Response({
+                        "error": "Company already exists. Please contact your admin for an invite."
+                    }, status=400)
 
- - Team FinAI
- """
+                company = Company.objects.create(
+                    name=company_name,
+                    domain=company_name.lower().replace(" ", "-")
+                )
 
-            send_mail(
-                subject='Welcome to FinAI 🎉',
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,  # NEW (fixed)
-                recipient_list=[user.email],
-                fail_silently=True,  # NEW (avoid blocking signup)
-            )
+                user = serializer.save()
+                user.company = company
+                user.save()
 
+                CompanyUser.objects.create(
+                    company=company,
+                    email=user.email,
+                    name=user.username,
+                    role="admin"
+                )
 
+            # 3️⃣ STEP 3: PERSONAL FLOW
+            else:
+                user = serializer.save()
+                user.company = None
+                user.save()
 
+            # 📧 SEND WELCOME EMAIL
+            self.send_welcome_email(user)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def send_welcome_email(self, user):
+        company_name = user.company.name if user.company else "FinAI"
 
+        message = f"""Hi {user.username},
+
+Welcome to FinAI 🎉
+
+We're excited to have you on board!
+
+✨ What you can do now:
+- Track your income and expenses
+- Get AI-powered financial insights
+- Manage budgets effectively
+
+🏢 Workspace: {company_name}
+
+Start managing your finances smarter 🚀
+
+- Team FinAI
+"""
+
+        send_mail(
+            subject='Welcome to FinAI 🎉',
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+
+
+
+class CustomLoginView(TokenObtainPairView):
+    permission_classes = [AllowAny]
+    serializer_class = CustomTokenObtainPairSerializer
 
 # USER PROFILE
 class ProfileView(APIView):
@@ -69,8 +230,13 @@ class ProfileView(APIView):
         user.last_name = data.get("last_name", user.last_name)
         user.email = data.get("email", user.email)
 
-        #  update profile picture
-        profile_picture = data.get("profile_picture")
+        # Update password if provided
+        password = data.get("password")
+        if password:
+            user.set_password(password)
+
+        # Update profile picture
+        profile_picture = request.FILES.get("profile_picture")
         if profile_picture:
             user.profile_picture = profile_picture
 
@@ -84,7 +250,7 @@ class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get("email").strip()
+        email = (request.data.get("email") or "").strip()
         if not email:
             return Response({"error": "Email is required"}, status=400)
 

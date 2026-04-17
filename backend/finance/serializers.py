@@ -12,21 +12,35 @@ class CategorySerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
 
     category_name = serializers.ReadOnlyField(source="category.name")
+    user_name = serializers.ReadOnlyField(source="user.username")
+    user_role = serializers.SerializerMethodField()
 
     class Meta:
         model = Transaction
         fields = [
             "id",
             "user",
+            "user_name",
+            "user_role",
+            "company",
             "category",
             "category_name",
             "amount",
             "type",
             "description",
             "date",
+            "status",
             "created_at"
         ]
-        read_only_fields = ["user"]
+        read_only_fields = ["user","company", "status"]
+
+    def get_user_role(self, obj):
+        from tenants.models import CompanyUser
+        if obj.company and obj.user:
+            cu = CompanyUser.objects.filter(email=obj.user.email, company=obj.company).first()
+            return cu.role if cu else "personal"
+        return "personal"
+
 
 
 class BudgetSerializer(serializers.ModelSerializer):
@@ -45,4 +59,4 @@ class BudgetSerializer(serializers.ModelSerializer):
             "year",
             "created_at"
         ]
-        read_only_fields = ["user"]
+        read_only_fields = ["user",]

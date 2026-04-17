@@ -5,7 +5,9 @@ from .views import (
     BudgetView,
     DashboardSummaryAPIView,
     ExportTransactionsCSV,
-    AIInsightsAPIView
+    AIInsightsAPIView,
+    PendingTransactionsView,
+    ApproveTransactionView
 )
 
 urlpatterns = [
@@ -14,6 +16,9 @@ urlpatterns = [
     path("transactions/", TransactionView.as_view(), name="transactions"),
     path("transactions/<int:pk>/", TransactionView.as_view(), name="transaction_detail"),
     
+    path("transactions/pending/", PendingTransactionsView.as_view(),name="pending-transactions"),
+    path("transactions/<int:pk>/approve/", ApproveTransactionView.as_view(),name="approve-transaction"),
+
     path("budgets/", BudgetView.as_view(), name="budgets"),
     path("budgets/<int:pk>/", BudgetView.as_view(), name="budget_detail"),
     path("dashboard/", DashboardSummaryAPIView.as_view(), name="dashboard"),

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../api/axios";
-import { User, Mail, Lock, Camera, Save, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
+import { User, Mail, Lock, Camera, Save, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
@@ -11,11 +11,14 @@ const Profile = () => {
     username: "",
   });
 
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,8 +29,18 @@ const Profile = () => {
     try {
       const response = await api.get("accounts/profile/");
       setUser(response.data);
+      setPreview(response.data.profile_picture); 
     } catch (error) {
       console.error("Error fetching profile", error);
+    }
+  };
+
+   const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setProfilePicture(file);
+
+    if (file) {
+      setPreview(URL.createObjectURL(file)); // instant preview
     }
   };
 
@@ -37,12 +50,30 @@ const Profile = () => {
     setMessage("");
 
     try {
-      const payload = { ...user };
+      const formData = new FormData();
+
+      formData.append("first_name", user.first_name);
+      formData.append("last_name", user.last_name);
+      formData.append("email", user.email);
+
       if (password) {
-        payload.password = password;
+        formData.append("password", password);
       }
-      await api.put("accounts/profile/", payload);
-      setMessage("Account details synchronized successfully.");
+
+      if (profilePicture) {
+        formData.append("profile_picture", profilePicture); 
+      }
+
+      const response = await api.put("accounts/profile/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      
+      setUser(response.data);
+      setPreview(response.data.profile_picture); 
+      setProfilePicture(null); // Clear the file state
+      setMessage("Profile updated successfully");
       setIsError(false);
       setPassword("");
     } catch (error) {
@@ -74,12 +105,31 @@ const Profile = () => {
         <div className="h-28 bg-gradient-to-r from-primary/10 via-emerald-50/30 to-primary/5 relative">
           <div className="absolute -bottom-10 left-8">
             <div className="relative group">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/png, image/jpeg"
+                onChange={handleFileChange}
+              />
               <div className="w-20 h-20 bg-white rounded-2xl p-1 shadow-lg ring-4 ring-white overflow-hidden">
-                <div className="w-full h-full bg-gray-50 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-500">
-                  <User size={32} className="stroke-[2.5]" />
+                <div className="w-full h-full bg-gray-50 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-500 overflow-hidden">
+                  {preview ? (
+                    <img 
+                      src={preview.startsWith('blob:') || preview.startsWith('http') ? preview : `http://127.0.0.1:8000${preview}`} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User size={32} className="stroke-[2.5]" />
+                  )}
                 </div>
               </div>
-              <button className="absolute -bottom-1 -right-1 p-2 bg-primary text-white rounded-lg border-2 border-white shadow-md hover:scale-110 transition-all cursor-pointer">
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="absolute -bottom-1 -right-1 p-2 bg-primary text-white rounded-lg border-2 border-white shadow-md hover:scale-110 transition-all cursor-pointer"
+              >
                 <Camera size={12} />
               </button>
             </div>

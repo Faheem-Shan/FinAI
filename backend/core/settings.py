@@ -47,8 +47,12 @@ INSTALLED_APPS = [
      'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
 
+    'channels', 
+
     'accounts',
     'finance',
+    'tenants',
+    'notifications',
 ]
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
@@ -62,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.CompanyMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -83,7 +88,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-
+ASGI_APPLICATION = 'core.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
@@ -208,3 +213,11 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}

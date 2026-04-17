@@ -174,6 +174,8 @@ const Settings = () => {
     }
 
     localStorage.setItem("theme", theme);
+    // 💡 Notify other components in the same tab
+    window.dispatchEvent(new Event("themeChange"));
   }, [theme]);
 
   return (

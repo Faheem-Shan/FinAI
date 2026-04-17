@@ -58,24 +58,27 @@
   --color-primary: #15CC81;
   --color-primary-hover: #12b371;
 
-  --bg-main: #F5F3EF;
+  /* Premium Light Theme (Platinum) */
+  --bg-main: #F8FAFC; 
   --bg-card: #ffffff;
+  --bg-sidebar: #ffffff; /* Turns light to match the platinum theme */
 
-  --text-main: #1A1A1A;
-  --text-secondary: #666666;
+  --text-main: #0F172A;
+  --text-secondary: #475569; /* Darker Slate for better visibility */
 
-  --border: #E5E7EB;
+  --border: #E2E8F0;
 }
 
 /* 🔹 DARK MODE */
 .dark {
-  --bg-main: #0F172A;
-  --bg-card: #1E293B;
+  --bg-main: #020617; 
+  --bg-card: #0F172A; 
+  --bg-sidebar: #020617; /* Stays dark for the financial fortress feel */
 
-  --text-main: #F1F5F9;
+  --text-main: #F8FAFC;
   --text-secondary: #94A3B8;
 
-  --border: #334155;
+  --border: #1E293B;
 }
 
 /* 🔹 BASE */

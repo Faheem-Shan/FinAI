@@ -15,12 +15,17 @@ import Profile from "./pages/Profile";
 import Home from "./pages/Home";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import PendingApprovals from "./pages/PendingApprovals";
+import Organization from "./pages/Organization";
+
 
 
 import { AuthContext } from "./context/AuthContext";
+import { Toaster } from "react-hot-toast";
 
 
 const PrivateRoute = ({ children }) => {
+
   const { token, loading } = useContext(AuthContext);
 
   if (loading) {
@@ -37,11 +42,14 @@ const PrivateRoute = ({ children }) => {
 function App() {
   useEffect(() => {
     const theme = localStorage.getItem("theme") || "light";
-    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, []);
 
   return (
-    <Routes>
+    <>
+      <Toaster position="top-right" reverseOrder={false} />
+      <Routes>
+
 
       {/* PUBLIC */}
       <Route path="/" element={<Home />} />
@@ -88,14 +96,14 @@ function App() {
         }
       />
 
-      {/* <Route
+      <Route
         path="/insights"
         element={
           <PrivateRoute>
             <Layout><Insights /></Layout>
           </PrivateRoute>
         }
-      /> */}
+      />
 
       <Route
         path="/settings"
@@ -115,8 +123,30 @@ function App() {
         }
       />
 
+      {/* ✅ MULTI-TENANT SaaS ROUTES */}
+      <Route
+        path="/approvals"
+        element={
+          <PrivateRoute>
+            <Layout><PendingApprovals /></Layout>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/organization"
+        element={
+          <PrivateRoute>
+            <Layout><Organization /></Layout>
+          </PrivateRoute>
+        }
+      />
+
+
     </Routes>
+    </>
   );
 }
+
 
 export default App;

@@ -272,7 +272,7 @@ const Dashboard = () => {
       },
       tooltip: {
         callbacks: {
-          label: (context) => `${context.dataset.label}: $${context.raw}`
+          label: (context) => `${context.dataset.label}: ₹${context.raw.toLocaleString('en-IN')}`
         }
       }
     },
@@ -283,7 +283,7 @@ const Dashboard = () => {
         grid: { color: 'rgba(0,0,0,0.05)' },
         ticks: {
           color: textColor,
-          callback: (value) => value.toLocaleString()
+          callback: (value) => '₹' + value.toLocaleString('en-IN')
         }
       },
       x: {
@@ -312,32 +312,34 @@ const Dashboard = () => {
 
   // 💳 CARD
   const StatCard = ({ title, value, icon: Icon, color }) => (
-    <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border)] shadow hover:shadow-lg transition">
-      <Icon size={22} className={`mb-3 ${color}`} />
-      <p className="text-sm text-secondary">{title}</p>
-      <h2 className="text-2xl font-bold text-main">
-        ${value?.toLocaleString() || 0}
+    <div className="bg-[var(--bg-card)] p-5 rounded-[28px] border border-[var(--border)] shadow-lg hover:shadow-xl transition-all duration-300 group">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-[var(--bg-main)] border border-[var(--border)] transition-all group-hover:scale-110 ${color}`}>
+        <Icon size={20} />
+      </div>
+      <p className="text-[9px] font-black text-[var(--text-secondary)] uppercase tracking-[0.2em]">{title}</p>
+      <h2 className="text-2xl font-black text-[var(--text-main)] mt-1 tracking-tight">
+        ₹{value?.toLocaleString('en-IN') || 0}
       </h2>
     </div>
   );
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 space-y-10">
-
+    <div className="max-w-[1240px] mx-auto px-6 space-y-8 animate-in fade-in duration-700 transition-colors duration-500">
+ 
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Financial Overview</h1>
-          <p className="text-sm text-secondary">Track your income and expenses</p>
+          <h1 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Financial Overview</h1>
+          <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-[0.2em]">Activity Audit</p>
         </div>
-
-        <div className="flex bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-1">
-          <button className="px-4 py-2 bg-primary text-white rounded-lg text-sm">
+ 
+        <div className="flex bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-0.5 shadow-sm">
+          <button className="px-4 py-1.5 bg-green-500 text-white rounded-[10px] text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20">
             Monthly
           </button>
-          <button className="px-4 py-2 text-sm text-secondary">
+          {/* <button className="px-4 py-1.5 text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest hover:text-[var(--text-main)] transition-colors">
             Yearly
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -379,7 +381,7 @@ const Dashboard = () => {
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <p className="text-xs text-secondary">Total</p>
                 <h3 className="text-lg font-bold text-main">
-                  ${data?.total_expense}
+                  ₹{data?.total_expense.toLocaleString('en-IN')}
                 </h3>
               </div>
             </div>
@@ -395,7 +397,7 @@ const Dashboard = () => {
                     />
                     <span>{c.category__name}</span>
                   </div>
-                  <span className="font-semibold">${c.amount}</span>
+                  <span className="font-semibold">₹{c.amount.toLocaleString('en-IN')}</span>
                 </div>
               ))}
             </div>

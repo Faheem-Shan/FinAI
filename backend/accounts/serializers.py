@@ -45,6 +45,7 @@
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -66,11 +67,36 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+    def validate(self, attrs):
+        username = attrs.get("username")
+
+        # 🔥 EMAIL → USERNAME conversion
+        user = User.objects.filter(email=username).first()
+
+        if user:
+            attrs["username"] = user.username
+
+        # ✅ Default JWT validation
+        data = super().validate(attrs)
+
+        # ✅ Add user info
+        data["user"] = {
+            "id": self.user.id,
+            "username": self.user.username,
+            "email": self.user.email,
+            "company": self.user.company.name if self.user.company else None
+        }
+
+        return data
 
 # 🔹 USER PROFILE SERIALIZER
 class UserSerializer(serializers.ModelSerializer):
 
     profile_picture = serializers.ImageField(read_only=True)
+    tenant_details = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -80,5 +106,27 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
-            "profile_picture"
+            "profile_picture",
+            "company", 
+            "tenant_details",
+            "role",
         ]
+
+    def get_tenant_details(self, obj):
+        if obj.company:
+            return {
+                "id": obj.company.id,
+                "name": obj.company.name,
+                "domain": obj.company.domain
+            }
+        return None
+
+    def get_role(self, obj):
+        if obj.company:
+            from tenants.models import CompanyUser
+            cu = CompanyUser.objects.filter(
+                email=obj.email, 
+                company=obj.company
+            ).first()
+            return cu.role if cu else "accountant"
+        return None

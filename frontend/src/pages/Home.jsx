@@ -150,7 +150,7 @@ const Home = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-text-secondary">Monthly Savings</p>
-                    <p className="text-xl font-black text-text-main">+$1,240.50</p>
+                    <p className="text-xl font-black text-text-main">+₹1,240.50</p>
                   </div>
                 </div>
               </div>
