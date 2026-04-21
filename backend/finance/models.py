@@ -146,9 +146,6 @@ from django.db import models
 from django.conf import settings
 
 
-# ============================
-# 📂 CATEGORY MODEL
-# ============================
 class Category(models.Model):
 
     TYPE_CHOICES = (
@@ -198,9 +195,6 @@ class Category(models.Model):
         return f"{self.name} ({self.type})"
 
 
-# ============================
-# 💰 TRANSACTION MODEL
-# ============================
 class Transaction(models.Model):
 
     TRANSACTION_TYPE = (
@@ -255,15 +249,30 @@ class Transaction(models.Model):
         default="approved"
     )
 
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,
+        blank=True,related_name="approved_transactions"
+    )
+
+    approved_at = models.DateTimeField(null=True,blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user"]),
+            models.Index(fields=["company"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["is_deleted"]),
+        ]
+
 
     def __str__(self):
         return f"{self.user} - {self.type} - ₹{self.amount}"
 
 
-# ============================
-# 🎯 BUDGET MODEL
-# ============================
+
 class Budget(models.Model):
 
     user = models.ForeignKey(

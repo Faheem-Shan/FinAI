@@ -14,6 +14,9 @@ class TransactionSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source="category.name")
     user_name = serializers.ReadOnlyField(source="user.username")
     user_role = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+    approved_at = serializers.DateTimeField(read_only=True)
+
 
     class Meta:
         model = Transaction
@@ -30,7 +33,9 @@ class TransactionSerializer(serializers.ModelSerializer):
             "description",
             "date",
             "status",
-            "created_at"
+            "created_at",
+            "approved_by_name",
+            "approved_at",
         ]
         read_only_fields = ["user","company", "status"]
 
@@ -40,6 +45,11 @@ class TransactionSerializer(serializers.ModelSerializer):
             cu = CompanyUser.objects.filter(email=obj.user.email, company=obj.company).first()
             return cu.role if cu else "personal"
         return "personal"
+    
+    def get_approved_by_name(self, obj):
+        if obj.approved_by:
+            return obj.approved_by.username
+        return None
 
 
 

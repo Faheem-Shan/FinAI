@@ -193,8 +193,11 @@ const Transactions = () => {
                     </span>
                   </td>
 
-                  {/* STATUS */}
-                  <td className="p-5">
+                 {/* STATUS */}
+                <td className="p-5">
+                  <div className="flex flex-col gap-1">
+                    
+                    {/* STATUS BADGE */}
                     <div className="flex items-center gap-1.5">
                       <div className={`w-1.5 h-1.5 rounded-full ${
                         t.status === "approved" ? "bg-green-500 shadow-sm shadow-green-500/50" :
@@ -207,7 +210,23 @@ const Transactions = () => {
                         {t.status}
                       </span>
                     </div>
-                  </td>
+
+                    {/* 🔥 NEW: APPROVAL INFO (ONLY IF APPROVED) */}
+                    {t.status === "approved" && t.approved_by_name && (
+                      <div className="text-[9px] text-[var(--text-secondary)] font-medium">
+                        Approved by <span className="font-bold text-[var(--text-main)]">{t.approved_by_name}</span>
+                      </div>
+                    )}
+
+                    {/* 🔥 OPTIONAL: APPROVAL TIME */}
+                    {t.status === "approved" && t.approved_at && (
+                      <div className="text-[8px] text-slate-400">
+                        {new Date(t.approved_at).toLocaleString()}
+                      </div>
+                    )}
+
+                  </div>
+                </td>
 
                   {/* AMOUNT */}
                   <td className={`p-5 text-right font-black text-sm tabular-nums ${t.type === 'income' ? 'text-green-500' : 'text-rose-500'}`}>

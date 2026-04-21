@@ -50,7 +50,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 User = get_user_model()
 
 
-# 🔹 REGISTER SERIALIZER
+
 class RegisterSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True)
@@ -72,16 +72,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         username = attrs.get("username")
 
-        # 🔥 EMAIL → USERNAME conversion
+        
         user = User.objects.filter(email=username).first()
 
         if user:
             attrs["username"] = user.username
 
-        # ✅ Default JWT validation
+        # Default JWT validation
         data = super().validate(attrs)
 
-        # ✅ Add user info
+        
         data["user"] = {
             "id": self.user.id,
             "username": self.user.username,
@@ -91,7 +91,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return data
 
-# 🔹 USER PROFILE SERIALIZER
+
 class UserSerializer(serializers.ModelSerializer):
 
     profile_picture = serializers.ImageField(read_only=True)

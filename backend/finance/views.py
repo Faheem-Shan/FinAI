@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.db.models import Sum
+from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models.functions import TruncMonth
@@ -211,19 +212,21 @@ class TransactionView(APIView):
 
         user = request.user
 
-        # ✅ MULTI-TENANT FILTER
+        #  MULTI-TENANT FILTER
         if user.company:
             transactions = Transaction.objects.filter(
-                company=user.company
-            )
+                company=user.company,
+                is_deleted=False
+            ).select_related('category', 'user')
         else:
             transactions = Transaction.objects.filter(
-                user=user
-            )
+                user=user,
+                is_deleted=False
+            ).select_related('category', 'user')
 
         transactions = transactions.order_by("-date")
 
-        # 🔍 FILTERS
+        #  FILTERS
         search = request.GET.get("search")
         t_type = request.GET.get("type")
         category = request.GET.get("category")
@@ -255,7 +258,7 @@ class TransactionView(APIView):
             category = serializer.validated_data.get("category")
 
 
-            # 🤖 AI CATEGORY PREDICTION (Only if not selected by user)
+            #  AI CATEGORY PREDICTION (Only if not selected by user)
             description = request.data.get("description", "")
 
             if not category and description:
@@ -270,9 +273,7 @@ class TransactionView(APIView):
                         predicted = ai_response.json().get("category")
 
                         if predicted:
-                            from .models import Category
-
-                            # match predicted category from DB (Secured for Multi-Tenancy)
+                           
                             if company:
                                 ai_category = Category.objects.filter(
                                     name__iexact=predicted, company=company
@@ -289,7 +290,7 @@ class TransactionView(APIView):
                     pass  # if AI fails, continue normally
 
 
-            # 🔐 CATEGORY VALIDATION 
+            #  CATEGORY VALIDATION 
           
             if company:
                 if category and category.company != company:
@@ -302,30 +303,51 @@ class TransactionView(APIView):
             # 🔍 GET ROLE
            
             role = None
+            
+
             if company:
-                from tenants.models import CompanyUser
                 cu = CompanyUser.objects.filter(
                     email=user.email,
                     company=company
                 ).first()
 
-                if cu:
-                    role = cu.role
+                if not cu:
+                    return Response({"error": "User not in company"}, status=403)
 
-          
+                role = cu.role
+
+                if role not in ["accountant", "manager", "admin"]:
+                        return Response(
+                            {"error": "Not allowed to create transaction"},
+                            status=403
+                        )
+
+
+
+            # 🔥 NEW APPROVAL LOGIC
+            amount = serializer.validated_data.get("amount")
+
             if not company:
                 status_value = "approved"
 
-            elif role == "accountant":
-                status_value = "pending"
-
             else:
-                status_value = "approved"
+                if role == "admin":
+                    status_value = "approved"
+
+                elif role == "manager":
+                    status_value = "pending" if amount > 20000 else "approved"
+
+                elif role == "accountant":
+                    status_value = "pending" if amount > 10000 else "approved"
+
+                else:
+                    status_value = "pending"
 
           
             transaction = serializer.save(
                 user=user,
                 company=company,
+                category=category,
                 status=status_value
             )
 
@@ -352,15 +374,25 @@ class TransactionView(APIView):
             if request.user.company:
                 transaction = Transaction.objects.get(
                     id=pk,
-                    company=request.user.company
+                    company=request.user.company,
+                    is_deleted=False 
                 )
             else:
                 transaction = Transaction.objects.get(
                     id=pk,
-                    user=request.user
+                    user=request.user,
+                    is_deleted=False 
+                )
+            if transaction.status == "approved":
+                return Response(
+                    {"error": "Cannot delete approved transaction"},
+                    status=400
                 )
 
-            transaction.delete()
+
+            transaction.is_deleted = True
+            transaction.save()
+
             return Response({"message": "Transaction deleted successfully"}, status=200)
 
         except Transaction.DoesNotExist:
@@ -421,7 +453,7 @@ Stay within your budget ⚠️
         if not budget:
             return
 
-        # 🔍 CALCULATE EXPENSE
+        # CALCULATE EXPENSE
         if user.company:
             total_expense = Transaction.objects.filter(
                 company=user.company,
@@ -429,7 +461,8 @@ Stay within your budget ⚠️
                 category=category,
                 date__month=now.month,
                 date__year=now.year,
-                status="approved"
+                status="approved",
+                is_deleted=False 
             ).aggregate(Sum("amount"))["amount__sum"] or 0
         else:
             total_expense = Transaction.objects.filter(
@@ -437,10 +470,11 @@ Stay within your budget ⚠️
                 type="expense",
                 category=category,
                 date__month=now.month,
-                date__year=now.year
+                date__year=now.year,
+                is_deleted=False
             ).aggregate(Sum("amount"))["amount__sum"] or 0
 
-        # ⚠️ 80% ALERT
+        #  80% ALERT
         if not budget.alert_80_sent and total_expense >= budget.amount * Decimal("0.8"):
             send_transaction_email.delay(
                 user.email,
@@ -450,7 +484,7 @@ Stay within your budget ⚠️
             budget.alert_80_sent = True
             budget.save()
 
-        # 🚨 100% ALERT
+        #  100% ALERT
         if not budget.alert_100_sent and total_expense >= budget.amount:
             send_transaction_email.delay(
                 user.email,
@@ -467,9 +501,7 @@ class BudgetView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    # ============================
-    # 📥 GET BUDGETS
-    # ============================
+   
     def get(self, request):
 
         now = timezone.now()
@@ -604,22 +636,20 @@ class DashboardSummaryAPIView(APIView):
         user = request.user
         now = timezone.now()
 
-        # ============================
-        # 🔐 BASE QUERY (MULTI-TENANT)
-        # ============================
+       
         if user.company:
             base_queryset = Transaction.objects.filter(
                 company=user.company,
-                status="approved"   # VERY IMPORTANT
+                status="approved",
+                is_deleted=False 
             )
         else:
             base_queryset = Transaction.objects.filter(
-                user=user
+                user=user,
+                is_deleted=False
             )
 
-        # ============================
-        # ✅ CURRENT MONTH DATA
-        # ============================
+    
         current_transactions = base_queryset.filter(
             date__month=now.month,
             date__year=now.year
@@ -633,9 +663,7 @@ class DashboardSummaryAPIView(APIView):
 
         total_savings = total_income - total_expense
 
-        # ============================
-        # 📊 LAST 6 MONTHS GRAPH
-        # ============================
+   
         six_months_ago = now - timedelta(days=180)
 
         monthly_activity = base_queryset.filter(
@@ -692,12 +720,14 @@ class ExportTransactionsCSV(APIView):
         if user.company:
             transactions = Transaction.objects.filter(
                 company=user.company,
-                status="approved"   # VERY IMPORTANT
-            )
-            company_name = user.company.name
+                status="approved",
+                is_deleted=False   
+            ).select_related('category', 'user') # 🚀 N+1 Fixed
+            company_name = request.company.name
         else:
             transactions = Transaction.objects.filter(
-                user=user
+                user=user,
+                is_deleted=False
             )
             company_name = "FinAI"
 
@@ -717,9 +747,7 @@ class ExportTransactionsCSV(APIView):
 
         total_savings = total_income - total_expense
 
-        # ============================
-        # 📄 CREATE CSV RESPONSE
-        # ============================
+        
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="{company_name}_Report_{now.month}_{now.year}.csv"'
 
@@ -772,11 +800,13 @@ class AIInsightsAPIView(APIView):
         if user.company:
             base_queryset = Transaction.objects.filter(
                 company=user.company,
-                status="approved"
+                status="approved",
+                is_deleted=False
             )
         else:
             base_queryset = Transaction.objects.filter(
-                user=user
+                user=user,
+                is_deleted=False
             )
 
         expenses = base_queryset.filter(type="expense")
@@ -868,8 +898,9 @@ class PendingTransactionsView(APIView):
 
         transactions = Transaction.objects.filter(
             company=user.company,
-            status="pending"
-        ).order_by("-date")
+            status="pending",
+            is_deleted=False
+        ).select_related('category', 'user').order_by("-date")
 
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
@@ -920,6 +951,76 @@ class PendingTransactionsView(APIView):
 
 #         return Response({"message": f"Transaction {transaction.status}"})
 
+
+
+# class ApproveTransactionView(APIView):
+
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, pk):
+
+#         user = request.user
+
+#         if not user.company:
+#             return Response({"error": "Not a company user"}, status=403)
+
+#         cu = CompanyUser.objects.filter(
+#             email=user.email,
+#             company=user.company
+#         ).first()
+
+#         if not cu or cu.role not in ["admin", "manager"]:
+#             return Response({"error": "Not allowed"}, status=403)
+
+#         try:
+#             transaction_obj = Transaction.objects.get(
+#                 id=pk,
+#                 company=user.company
+#             )
+#         except Transaction.DoesNotExist:
+#             return Response({"error": "Transaction not found"}, status=404)
+
+#         action = request.data.get("action")
+
+#         if action not in ["approve", "reject"]:
+#             return Response({"error": "Invalid action"}, status=400)
+
+#         # 🔥 TRANSACTION START
+#         with transaction.atomic():
+
+#             # ✅ Update status
+#             if action == "approve":
+#                 transaction_obj.status = "approved"
+#             else:
+#                 transaction_obj.status = "rejected"
+
+#             transaction_obj.save()
+
+#             # ✅ Save notification (IMPORTANT)
+#             Notification.objects.create(
+#                 user=transaction_obj.user,
+#                 message=f"Your transaction has been {transaction_obj.status} by {user.username}"
+#             )
+
+#         #  AFTER COMMIT → send websocket
+#         try:
+#             channel_layer = get_channel_layer()
+
+#             async_to_sync(channel_layer.group_send)(
+#                 f"user_{transaction_obj.user.id}",
+#                 {
+#                     "type": "send_notification",
+#                     "message": f"Your transaction has been {transaction_obj.status} by {user.username}"
+#                 }
+#             )
+#         except Exception as e:
+#             print("WebSocket Error:", e)
+
+#         return Response({
+#             "message": f"Transaction {transaction_obj.status}",
+#             "status": transaction_obj.status
+#         })
+
 class ApproveTransactionView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -931,7 +1032,6 @@ class ApproveTransactionView(APIView):
         if not user.company:
             return Response({"error": "Not a company user"}, status=403)
 
-        # 🔍 ROLE CHECK
         cu = CompanyUser.objects.filter(
             email=user.email,
             company=user.company
@@ -941,54 +1041,64 @@ class ApproveTransactionView(APIView):
             return Response({"error": "Not allowed"}, status=403)
 
         try:
-            transaction = Transaction.objects.get(
+            transaction_obj = Transaction.objects.get(
                 id=pk,
                 company=user.company
             )
         except Transaction.DoesNotExist:
             return Response({"error": "Transaction not found"}, status=404)
+        
+        if transaction_obj.is_deleted:
+            return Response({"error": "Not found"}, status=404)
 
-        action = request.data.get("action")  # approve / reject
+      
+        # 🚫 PREVENT SELF APPROVAL 
+      
+        if transaction_obj.user == user:
+            return Response(
+                {"error": "Cannot approve your own transaction"},
+                status=403
+            )
+
+        action = request.data.get("action")
 
         if action not in ["approve", "reject"]:
             return Response({"error": "Invalid action"}, status=400)
 
-        # ✅ UPDATE STATUS
-        if action == "approve":
-            transaction.status = "approved"
-        else:
-            transaction.status = "rejected"
+        
+        with transaction.atomic():
 
-        transaction.save()
+            if action == "approve":
+                transaction_obj.status = "approved"
+            else:
+                transaction_obj.status = "rejected"
 
+            # 🔥 AUDIT TRAIL (NEW)
+            transaction_obj.approved_by = user
+            transaction_obj.approved_at = timezone.now()
 
-        try:
+            transaction_obj.save()
+
             Notification.objects.create(
-                user=transaction.user,   # 👈 accountant (receiver)
-                message=f"Your transaction has been {transaction.status} by {user.username}"
+                user=transaction_obj.user,
+                message=f"Your transaction has been {transaction_obj.status} by {user.username}"
             )
-        except Exception as e:
-            print("Notification DB Error:", e)
 
-
-       
-        # 🔔 WEBSOCKET NOTIFICATION (NEW)
         
         try:
             channel_layer = get_channel_layer()
 
             async_to_sync(channel_layer.group_send)(
-                f"user_{transaction.user.id}",   # 👈 accountant user
+                f"user_{transaction_obj.user.id}",
                 {
                     "type": "send_notification",
-                    "message": f"Your transaction has been {transaction.status} by {user.username}"
+                    "message": f"Your transaction has been {transaction_obj.status} by {user.username}"
                 }
             )
         except Exception as e:
             print("WebSocket Error:", e)
 
-       
         return Response({
-            "message": f"Transaction {transaction.status}",
-            "status": transaction.status
+            "message": f"Transaction {transaction_obj.status}",
+            "status": transaction_obj.status
         })

@@ -52,14 +52,14 @@ def category(data: CategoryRequest):
     user = None
     company = None
 
-    # 🔥 Fetch user (optional)
+    #  Fetch user 
     if data.user_id:
         try:
             user = User.objects.get(id=data.user_id)
         except User.DoesNotExist:
             pass
 
-    # 🔥 Fetch company (optional)
+    #  Fetch company 
     if data.company_id:
         try:
             company = Company.objects.get(id=data.company_id)

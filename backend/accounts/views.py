@@ -114,7 +114,7 @@ User = get_user_model()
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# backend/accounts/views.py
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -165,13 +165,13 @@ class RegisterView(APIView):
                     role="admin"
                 )
 
-            # 3️⃣ STEP 3: PERSONAL FLOW
+            # PERSONAL FLOW
             else:
                 user = serializer.save()
                 user.company = None
                 user.save()
 
-            # 📧 SEND WELCOME EMAIL
+            
             self.send_welcome_email(user)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -134,14 +134,12 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-# 🔥 CLEAN TEXT
+
 def clean_text(text):
     return text.lower().strip()
 
 
-# ==============================
-# 🔹 TRAINING DATA
-# ==============================
+
 
 texts = [
     "swiggy order", "zomato dinner", "dominos pizza",
@@ -207,9 +205,7 @@ COMPANY_CATEGORIES = [
 ]
 
 
-# ==============================
-# 🔹 🔥 RAG FUNCTION
-# ==============================
+
 
 def find_best_match(text, user=None, company=None):
     from finance.models import Transaction
