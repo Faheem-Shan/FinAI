@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: finai_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - ./backend/.env
+
+  
+
+  db:
+    image: postgres:15
+    container_name: finai_db
+    environment:
+      POSTGRES_DB: finai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    container_name: finai_redis
+    ports:
+      - "6379:6379"
+
+  celery:
+    build: ./backend
+    container_name: finai_celery
+    command: celery -A core worker -l info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - ./backend/.env
+
+volumes:
+  postgres_data:
