@@ -147,8 +147,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS SETTINGS (React → Django connection)
 
-CORS_ALLOW_ALL_ORIGINS = True
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173","http://3.111.23.99"]
+CORS_ALLOW_ALL_ORIGINS = [
+    "http://localhost:5173",
+    "https://finai.vercel.app"
+]
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173","http://3.111.23.99","https://finai.vercel.app"]
 
 # DJANGO REST FRAMEWORK SETTINGS
 
