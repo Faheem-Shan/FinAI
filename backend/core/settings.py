@@ -31,6 +31,8 @@ DEBUG = os.getenv("DEBUG") == "True"
 
 ALLOWED_HOSTS = ["3.111.23.99","127.0.0.1", "localhost","finai-ai.vercel.app","finai-dev.duckdns.org"]
 
+
+
 # Production HTTPS + Nginx Proxy Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
