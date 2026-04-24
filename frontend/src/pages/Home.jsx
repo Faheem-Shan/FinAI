@@ -248,10 +248,10 @@ const Home = () => {
           Our team is here to help you get the most out of FinAI. Reach out anytime.
         </p>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <p className="font-semibold text-text-main">Email: help@finai.io</p>
           <p className="font-semibold text-text-main">Phone: 9845782091</p>
-        </div>
+        </div> */}
       </div>
 
       {/* RIGHT SIDE FORM */}

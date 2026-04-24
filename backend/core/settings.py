@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 
 DEBUG = os.getenv("DEBUG") == "True"
 
-ALLOWED_HOSTS = ["3.111.23.99","127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["3.111.23.99","127.0.0.1", "localhost","finai-ai.vercel.app","finai-dev.duckdns.org"]
 
 # Application definition
 
@@ -147,12 +147,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS SETTINGS (React → Django connection)
 
-CORS_ALLOW_ALL_ORIGINS = [
+CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://finai.vercel.app"
+    "https://finai-ai.vercel.app",
+    "https://finai-dev.duckdns.org"
 ]
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173","http://3.111.23.99","https://finai.vercel.app"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173","https://finai-ai.vercel.app","https://finai-dev.duckdns.org"]
 
 # DJANGO REST FRAMEWORK SETTINGS
 
