@@ -64,7 +64,7 @@
 //             {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
 //           </p>
 //         </div>
-        
+
 //         <div className="flex items-center gap-3">
 //           <button className="relative p-2 text-text-secondary hover:text-primary hover:bg-primary/5 rounded-xl transition-colors group">
 //             <Bell size={18} />
@@ -94,7 +94,7 @@
 //                   <p className="text-[12px] font-black text-text-main truncate">{displayName}</p>
 //                   <p className="text-[10px] text-text-secondary truncate mt-0.5 font-medium">{user?.email}</p>
 //                 </div>
-                
+
 //                 <div className="p-1.5 space-y-0.5">
 //                   <Link 
 //                     to="/profile" 
@@ -141,7 +141,7 @@ const Header = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  
+
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -156,17 +156,20 @@ const Header = () => {
       }
     };
     fetchUser();
-  }, [location.pathname]); 
+  }, []);
 
-
-   useEffect(() => {
+  useEffect(() => {
     // ✅ Create WebSocket connection
     const token = localStorage.getItem("access");
     if (!token || token === "null") {
       console.log(" No token, skipping WebSocket");
       return;
     }
-    const socket = new WebSocket(  `ws://localhost:8000/ws/notifications/?token=${token}`);
+
+    // Use dynamic host for WebSocket to support both local and production
+    const host = window.location.host;
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(`${protocol}//${host}/ws/notifications/?token=${token}`);
 
     //  When connected
     socket.onopen = () => {
@@ -264,7 +267,7 @@ const Header = () => {
           {/* 🔔 DROPDOWN */}
           {notificationOpen && (
             <div className="absolute right-0 top-14 w-72 bg-white border rounded-xl shadow-lg p-4 z-50">
-              
+
               <p className="text-sm font-bold mb-2">Notifications</p>
 
               {notifications.length === 0 ? (
@@ -287,11 +290,11 @@ const Header = () => {
             >
               <div className="w-9 h-9 bg-green-500 text-slate-950 rounded-xl flex items-center justify-center font-black text-sm shadow-lg shadow-green-500/20 overflow-hidden">
                 {user?.profile_picture ? (
-                   <img 
-                      src={user.profile_picture.startsWith('http') ? user.profile_picture : `http://127.0.0.1:8000${user.profile_picture}`} 
-                      alt="P" 
-                      className="w-full h-full object-cover"
-                   />
+                  <img
+                    src={user.profile_picture.startsWith('http') ? user.profile_picture : `${import.meta.env.VITE_API_URL.replace('/api', '')}${user.profile_picture}`}
+                    alt="P"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   displayName[0]
                 )}

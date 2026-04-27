@@ -12,6 +12,19 @@ from tenants.models import Company,CompanyUser
 from .serializers import RegisterSerializer, UserSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import CustomTokenObtainPairSerializer
+from .tasks import send_contact_email
+from rest_framework.throttling import AnonRateThrottle
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
+
+
+from .tasks import (
+    send_contact_email,
+    send_welcome_email_task,
+    send_password_reset_email_task,
+)
+
 
 User = get_user_model()
 # REGISTER USER
@@ -171,41 +184,19 @@ class RegisterView(APIView):
                 user.company = None
                 user.save()
 
-            
-            self.send_welcome_email(user)
+            company_name = user.company.name if user.company else "FinAI"
+
+            send_welcome_email_task.delay(
+                user.username,
+                user.email,
+                company_name
+            )
+
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def send_welcome_email(self, user):
-        company_name = user.company.name if user.company else "FinAI"
-
-        message = f"""Hi {user.username},
-
-Welcome to FinAI 🎉
-
-We're excited to have you on board!
-
-✨ What you can do now:
-- Track your income and expenses
-- Get AI-powered financial insights
-- Manage budgets effectively
-
-🏢 Workspace: {company_name}
-
-Start managing your finances smarter 🚀
-
-- Team FinAI
-"""
-
-        send_mail(
-            subject='Welcome to FinAI 🎉',
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=True,
-        )
 
 
 
@@ -222,28 +213,48 @@ class ProfileView(APIView):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
+    # def put(self, request):
+    #     user = request.user
+    #     # data = request.data
+
+    #     # user.first_name = data.get("first_name", user.first_name)
+    #     # user.last_name = data.get("last_name", user.last_name)
+    #     # user.email = data.get("email", user.email)
+
+    #     # # Update password if provided
+    #     # password = data.get("password")
+    #     # if password:
+    #     #     user.set_password(password)
+
+    #     # # Update profile picture
+    #     # profile_picture = request.FILES.get("profile_picture")
+    #     # if profile_picture:
+    #     #     user.profile_picture = profile_picture
+
+    #     # user.save()
+
+    #     # serializer = UserSerializer(user)
+    #     # return Response(serializer.data)
     def put(self, request):
         user = request.user
-        data = request.data
 
-        user.first_name = data.get("first_name", user.first_name)
-        user.last_name = data.get("last_name", user.last_name)
-        user.email = data.get("email", user.email)
+        serializer = UserSerializer(
+            user,
+            data=request.data,
+            partial=True  # allows partial update
+        )
 
-        # Update password if provided
-        password = data.get("password")
-        if password:
-            user.set_password(password)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                serializer.data,
+                status=status.HTTP_200_OK
+            )
 
-        # Update profile picture
-        profile_picture = request.FILES.get("profile_picture")
-        if profile_picture:
-            user.profile_picture = profile_picture
-
-        user.save()
-
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
     
 class ForgotPasswordView(APIView):
 
@@ -262,30 +273,13 @@ class ForgotPasswordView(APIView):
             token = password_reset_token.make_token(user)
 
             # frontend URL (React)
-            reset_link = f"http://localhost:5173/reset/{uid}/{token}/"
-
-            message = f"""Hi {user.username},
-You requested a password reset.
-
-Click the link below to reset your password:
-{reset_link}
-
-If you didn't request this, please ignore this email.
-
-- Team FinAI
- """
-
-
-
-            # send email 
+            reset_link = f"https://finai-ai.vercel.app/reset/{uid}/{token}/"
             
-            send_mail(
-                subject="Password Reset",
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,  
-                recipient_list=[email],
-                fail_silently=False,
-            )
+            send_password_reset_email_task.delay(
+                            user.username,
+                            email,
+                            reset_link
+                        )
 
             return Response({"message": "If email exists, reset link sent"})
 
@@ -315,14 +309,60 @@ class ResetPasswordView(APIView):
             if not password:
                 return Response({"error": "Password is required"}, status=400)
 
-            if len(password) < 6:
-                return Response({"error": "Password too short"}, status=400)
+            try:
+                validate_password(password, user)
+
+            except ValidationError as e:
+                return Response(
+                    {
+                        "error": e.messages
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             
             # set new password
             user.set_password(password)
             user.save()
 
-            return Response({"message": "Password reset successful"})
+            return Response({"message": "Password reset successful"},status=status.HTTP_200_OK)
 
         except Exception:
             return Response({"error": "Something went wrong"}, status=400)
+        
+class ContactUsView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        name = request.data.get("name")
+        email = request.data.get("email")
+        message = request.data.get("message")
+
+        if not all([name, email, message]):
+            return Response(
+                {"error": "All fields are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response(
+                {"error": "Invalid email address"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            send_contact_email.delay(name, email, message)
+        except Exception:
+            return Response(
+                {
+                    "error": "Service temporarily unavailable. Please try again later."
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        return Response(
+            {"message": "Message sent successfully"},
+            status=status.HTTP_200_OK
+        )

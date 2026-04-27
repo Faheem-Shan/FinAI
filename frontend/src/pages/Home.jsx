@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useState} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -17,6 +17,58 @@ import financeImg from '../assets/finance.png';
 
 const Home = () => {
   const navigate = useNavigate();
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!name || !email || !message) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+         `${import.meta.env.VITE_API_URL}/api/accounts/contact/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            message,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Message sent successfully!');
+
+        setName('');
+        setEmail('');
+        setMessage('');
+      } else {
+        alert(data.error || 'Something went wrong');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Server error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const features = [
     {
@@ -255,12 +307,16 @@ const Home = () => {
       </div>
 
       {/* RIGHT SIDE FORM */}
-      <form className="md:w-1/2 w-full space-y-5">
+      <form 
+      onSubmit={handleSubmit}
+      className="md:w-1/2 w-full space-y-5">
 
         {/* NAME */}
         <input
           type="text"
           placeholder="Your Name"
+          value={name}
+          onChange={(e)=>setName(e.target.value)}
           className="w-full px-5 py-4 bg-white rounded-2xl border border-gray-200 
           focus:border-primary focus:ring-4 focus:ring-primary/10 
           transition-all shadow-sm outline-none"
@@ -270,6 +326,8 @@ const Home = () => {
         <input
           type="email"
           placeholder="Email Address"
+          value={email}
+          onChange={(e)=> setEmail(e.target.value)}
           className="w-full px-5 py-4 bg-white rounded-2xl border border-gray-200 
           focus:border-primary focus:ring-4 focus:ring-primary/10 
           transition-all shadow-sm outline-none"
@@ -279,6 +337,8 @@ const Home = () => {
         <textarea
           placeholder="How can we help?"
           rows="4"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
           className="w-full px-5 py-4 bg-white rounded-2xl border border-gray-200 
           focus:border-primary focus:ring-4 focus:ring-primary/10 
           transition-all shadow-sm resize-none outline-none"
@@ -291,7 +351,7 @@ const Home = () => {
           shadow-lg shadow-primary/30 hover:bg-primary-hover 
           hover:-translate-y-0.5 transition-all active:scale-[0.98]"
         >
-          Send Message
+           {loading ? "Sending..." : "Send Message"}
         </button>
 
       </form>

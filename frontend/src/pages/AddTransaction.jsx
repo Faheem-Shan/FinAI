@@ -529,7 +529,7 @@ const AddTransaction = () => {
   const [loading, setLoading] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState("");
 
-  // ✅ ADDED STATES (LOGIC ONLY)
+  
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
@@ -555,7 +555,7 @@ const AddTransaction = () => {
         console.log("Invalid user in localStorage");
       }
 
-      const res = await fetch("http://127.0.0.1:8001/predict-category", {
+      const res = await fetch("https://finai-dev.duckdns.org/predict-category", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -563,7 +563,7 @@ const AddTransaction = () => {
           user_id: user?.id,
           company_id: user?.company ? user.company.id : null
         })
-    });
+      });
 
       const data = await res.json();
       const suggestion = data.category?.toLowerCase();
@@ -573,10 +573,10 @@ const AddTransaction = () => {
         return;
       }
 
-      
+
       setSuggestedCategory(suggestion);
 
-      
+
       if (categories.length > 0) {
         const match = categories.find(c =>
           c.type === formData.type &&
@@ -604,7 +604,7 @@ const AddTransaction = () => {
     }
   };
 
-  
+
   const handleCreateCategory = async (e) => {
     e.preventDefault();
     if (!newCategoryName) return;
@@ -649,8 +649,8 @@ const AddTransaction = () => {
             type="button"
             onClick={() => setFormData({ ...formData, type: "expense", category: "" })}
             className={`py-2 rounded-lg text-sm font-medium ${formData.type === "expense"
-                ? "bg-rose-500 text-white"
-                : "text-[var(--text-secondary)]"
+              ? "bg-rose-500 text-white"
+              : "text-[var(--text-secondary)]"
               }`}
           >
             Expense
@@ -660,8 +660,8 @@ const AddTransaction = () => {
             type="button"
             onClick={() => setFormData({ ...formData, type: "income", category: "" })}
             className={`py-2 rounded-lg text-sm font-medium ${formData.type === "income"
-                ? "bg-green-500 text-white"
-                : "text-[var(--text-secondary)]"
+              ? "bg-green-500 text-white"
+              : "text-[var(--text-secondary)]"
               }`}
           >
             Income

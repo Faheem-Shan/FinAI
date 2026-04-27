@@ -261,7 +261,7 @@ class TransactionView(APIView):
             #  AI CATEGORY PREDICTION (Only if not selected by user)
             description = request.data.get("description", "")
 
-            if not category and description:
+            if (not category or category == "") and description:
                 try:
                     ai_response = requests.post(
                         "http://127.0.0.1:8001/predict-category",
@@ -276,11 +276,11 @@ class TransactionView(APIView):
                            
                             if company:
                                 ai_category = Category.objects.filter(
-                                    name__iexact=predicted, company=company
+                                   name__icontains=predicted, company=company
                                 ).first()
                             else:
                                 ai_category = Category.objects.filter(
-                                    name__iexact=predicted, user=user
+                                   name__icontains=predicted, user=user
                                 ).first()
 
                             if ai_category:
@@ -371,34 +371,64 @@ class TransactionView(APIView):
    
     def delete(self, request, pk):
         try:
-            if request.user.company:
+            user = request.user
+
+            
+            #Find transaction
+            
+            if user.company:
                 transaction = Transaction.objects.get(
                     id=pk,
-                    company=request.user.company,
-                    is_deleted=False 
+                    company=user.company,
+                    is_deleted=False
                 )
             else:
                 transaction = Transaction.objects.get(
                     id=pk,
-                    user=request.user,
-                    is_deleted=False 
+                    user=user,
+                    is_deleted=False
                 )
+
+           
+            #  PERSONAL USER
+           
+            if not user.company:
+                transaction.is_deleted = True
+                transaction.save()
+
+                return Response(
+                    {"message": "Transaction deleted successfully"},
+                    status=status.HTTP_200_OK
+                )
+
+            
+            # COMPANY USER RULES
+            # Approved = locked record
+            # Cannot delete approved transactions
+          
             if transaction.status == "approved":
                 return Response(
                     {"error": "Cannot delete approved transaction"},
-                    status=400
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-
+           
+            #  Pending / Rejected
+            
             transaction.is_deleted = True
             transaction.save()
 
-            return Response({"message": "Transaction deleted successfully"}, status=200)
+            return Response(
+                {"message": "Transaction deleted successfully"},
+                status=status.HTTP_200_OK
+            )
 
         except Transaction.DoesNotExist:
-            return Response({"error": "Transaction not found"}, status=404)
-
-  
+            return Response(
+                {"error": "Transaction not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
     def send_income_email(self, user, amount, category):
         company_name = user.company.name if user.company else "FinAI"
         message = f"""Hi {user.username},
@@ -722,8 +752,9 @@ class ExportTransactionsCSV(APIView):
                 company=user.company,
                 status="approved",
                 is_deleted=False   
-            ).select_related('category', 'user') # 🚀 N+1 Fixed
-            company_name = request.company.name
+            ).select_related('category', 'user') 
+            # company_name = request.company.name
+            company_name = user.company.name
         else:
             transactions = Transaction.objects.filter(
                 user=user,

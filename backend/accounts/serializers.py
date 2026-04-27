@@ -108,7 +108,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
 
-    profile_picture = serializers.ImageField(read_only=True)
+    profile_picture = serializers.ImageField(required=False)
     tenant_details = serializers.SerializerMethodField()
     role = serializers.SerializerMethodField()
 
