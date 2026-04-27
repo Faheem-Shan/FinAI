@@ -22,7 +22,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[   "http://localhost:5173",
+    "http://localhost:3000",
+    "https://finai-ai.vercel.app",
+    "https://finai-dev.duckdns.org",],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
